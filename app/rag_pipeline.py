@@ -1,7 +1,8 @@
-"""Minimal RAG pipeline: TF-IDF retrieval + Claude generation.
+"""Minimal RAG pipeline: TF-IDF retrieval + pluggable LLM generation.
 
 Kept deliberately simple (no vector DB, no embeddings API) so the project
 runs cheaply and the focus stays on the EVAL/TEST harness, not the app itself.
+Supports Groq/Gemini (free tiers) and Anthropic (paid) as providers.
 """
 
 import os
@@ -54,7 +55,63 @@ def generate_answer(query: str) -> dict:
 
 
 def _call_llm(system_prompt: str, user_prompt: str) -> str:
-    """Calls Anthropic's Claude API. Requires ANTHROPIC_API_KEY in the environment."""
+    """Calls whichever LLM provider has a key configured.
+
+    Checked in order: GROQ_API_KEY (free tier), GEMINI_API_KEY (free tier),
+    ANTHROPIC_API_KEY (paid). Set LLM_PROVIDER explicitly to force one.
+    """
+    provider = os.environ.get("LLM_PROVIDER")
+
+    if provider == "groq" or (provider is None and os.environ.get("GROQ_API_KEY")):
+        return _call_groq(system_prompt, user_prompt)
+    if provider == "gemini" or (provider is None and os.environ.get("GEMINI_API_KEY")):
+        return _call_gemini(system_prompt, user_prompt)
+    if provider == "anthropic" or (provider is None and os.environ.get("ANTHROPIC_API_KEY")):
+        return _call_anthropic(system_prompt, user_prompt)
+
+    raise RuntimeError(
+        "No LLM API key found. Set one of GROQ_API_KEY, GEMINI_API_KEY, or "
+        "ANTHROPIC_API_KEY in your environment."
+    )
+
+
+def _call_groq(system_prompt: str, user_prompt: str) -> str:
+    """Free tier: https://console.groq.com — no card required."""
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=os.environ["GROQ_API_KEY"],
+        base_url="https://api.groq.com/openai/v1",
+    )
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        max_tokens=300,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return response.choices[0].message.content
+
+
+def _call_gemini(system_prompt: str, user_prompt: str) -> str:
+    """Free tier: https://aistudio.google.com/apikey — no card required."""
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt, max_output_tokens=300
+        ),
+    )
+    return response.text
+
+
+def _call_anthropic(system_prompt: str, user_prompt: str) -> str:
+    """Requires paid credits: https://console.anthropic.com/settings/billing"""
     import anthropic
 
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
