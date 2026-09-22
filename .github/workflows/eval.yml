@@ -1,0 +1,42 @@
+name: AI Quality Eval Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install promptfoo
+        run: npm install -g promptfoo
+
+      - name: Run deepeval regression suite
+        run: pytest tests/test_deepeval.py -v
+
+      - name: Run promptfoo regression tests
+        working-directory: tests/promptfoo
+        run: promptfoo eval --no-cache
+
+      - name: Run ragas quality report
+        run: python tests/test_ragas.py
+
+      - name: Upload ragas report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragas-report
+          path: ragas_report.csv

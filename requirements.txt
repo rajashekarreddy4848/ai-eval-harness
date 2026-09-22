@@ -1,0 +1,7 @@
+anthropic>=0.40.0
+scikit-learn>=1.4.0
+pytest>=8.0.0
+deepeval>=1.4.0
+ragas>=0.2.0
+datasets>=2.19.0
+pandas>=2.2.0

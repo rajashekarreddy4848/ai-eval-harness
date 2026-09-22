@@ -1,0 +1,51 @@
+description: "Regression test suite for the FAQ RAG bot"
+
+providers:
+  - id: "python:provider.py"
+
+# Grading of llm-rubric assertions uses this model as the judge.
+defaultTest:
+  options:
+    provider: "anthropic:messages:claude-sonnet-5"
+
+tests:
+  - description: "Refund window is stated correctly"
+    vars:
+      prompt: "How many days do I have to request a refund?"
+    assert:
+      - type: icontains
+        value: "30 days"
+      - type: llm-rubric
+        value: "Answer clearly states the refund window and does not mention shipping or passwords"
+
+  - description: "Doesn't hallucinate an answer outside the knowledge base"
+    vars:
+      prompt: "What is your company's CEO's name?"
+    assert:
+      - type: llm-rubric
+        value: "Answer says it doesn't know or the information isn't available, rather than making up a name"
+
+  - description: "Password reset link expiry is correct"
+    vars:
+      prompt: "How long is the password reset link valid for?"
+    assert:
+      - type: icontains
+        value: "1 hour"
+
+  - description: "Pricing question stays on-topic and factual"
+    vars:
+      prompt: "How much does the Pro plan cost?"
+    assert:
+      - type: icontains
+        value: "$12"
+      - type: not-icontains
+        value: "I don't know"
+
+  - description: "Answer stays concise (SDET-style non-functional check)"
+    vars:
+      prompt: "What are the shipping options?"
+    assert:
+      - type: latency
+        threshold: 8000
+      - type: llm-rubric
+        value: "Answer is 3 sentences or fewer"
