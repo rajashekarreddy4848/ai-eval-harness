@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch: # "Run workflow" button in the Actions tab
 
 jobs:
   unit:
