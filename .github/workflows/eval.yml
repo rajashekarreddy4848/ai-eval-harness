@@ -17,6 +17,8 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: pytest tests/test_golden_set.py tests/test_retrieval.py tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py -v
+      - name: Retriever comparison (report only)
+        run: python evals/compare_retrievers.py --holdout
 
   eval:
     needs: unit

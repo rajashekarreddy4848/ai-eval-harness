@@ -1,0 +1,17 @@
+[
+  {"id": "HO-01", "question": "Is it too late to return something I purchased last month?", "expected_docs": ["Refund Policy"]},
+  {"id": "HO-02", "question": "Do I get cash back or store credit after the refund deadline?", "expected_docs": ["Refund Policy"]},
+  {"id": "HO-03", "question": "Which card does my refund go back to?", "expected_docs": ["Refund Policy"]},
+  {"id": "HO-04", "question": "How many business days for delivery inside the US?", "expected_docs": ["Shipping Times"]},
+  {"id": "HO-05", "question": "Do you ship overseas and how long does it take?", "expected_docs": ["Shipping Times"]},
+  {"id": "HO-06", "question": "I want to close my account permanently", "expected_docs": ["Account Deletion"]},
+  {"id": "HO-07", "question": "I deleted my account by mistake, is there a way to undo it?", "expected_docs": ["Account Deletion"]},
+  {"id": "HO-08", "question": "Forgot my login password, help", "expected_docs": ["Password Reset"]},
+  {"id": "HO-09", "question": "My password reset link expired, how long do they last?", "expected_docs": ["Password Reset"]},
+  {"id": "HO-10", "question": "What does the Pro subscription include?", "expected_docs": ["Subscription Plans"]},
+  {"id": "HO-11", "question": "pricing for a single user?", "expected_docs": ["Subscription Plans"]},
+  {"id": "HO-12", "question": "Does the team plan come with admin controls?", "expected_docs": ["Subscription Plans"]},
+  {"id": "HO-13", "question": "Can I download all my data as a JSON file?", "expected_docs": ["Data Export"]},
+  {"id": "HO-14", "question": "free plan export limits", "expected_docs": ["Data Export"]},
+  {"id": "HO-15", "question": "I want a refund and I also want to delete my account afterwards, how do I do both?", "expected_docs": ["Refund Policy", "Account Deletion"]}
+]

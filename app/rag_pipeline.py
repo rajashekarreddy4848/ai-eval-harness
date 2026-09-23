@@ -3,17 +3,13 @@
 Kept deliberately simple (no vector DB, no embeddings API) so the project
 runs cheaply and the focus stays on the EVAL/TEST harness, not the app itself.
 Supports Groq/Gemini (free tiers) and Anthropic (paid) as providers.
+The retriever is chosen in app/retrieval.py (RETRIEVER overrides it).
 """
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
-from app.knowledge_base import DOCS
 from app.providers import PROVIDERS, generator_provider
+from app.retrieval import active_retriever_name, build_retriever, top_k
 
-_vectorizer = TfidfVectorizer()
-_doc_texts = [d["text"] for d in DOCS]
-_doc_matrix = _vectorizer.fit_transform(_doc_texts)
+_retriever = build_retriever(active_retriever_name())
 
 SYSTEM_PROMPT = (
     "You are a support assistant. Answer the user's question using ONLY the "
@@ -23,11 +19,8 @@ SYSTEM_PROMPT = (
 
 
 def retrieve(query: str, k: int = 2) -> list[dict]:
-    """Return the top-k most relevant docs for the query via TF-IDF cosine similarity."""
-    query_vec = _vectorizer.transform([query])
-    scores = cosine_similarity(query_vec, _doc_matrix).flatten()
-    top_indices = scores.argsort()[::-1][:k]
-    return [DOCS[i] for i in top_indices]
+    """Return the top-k most relevant docs for the query."""
+    return top_k(_retriever, query, k)
 
 
 def build_prompt(query: str, contexts: list[dict]) -> str:

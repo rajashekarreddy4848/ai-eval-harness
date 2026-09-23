@@ -11,7 +11,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPACE_FILES = ["__init__.py", "knowledge_base.py", "providers.py", "rag_pipeline.py"]
+SPACE_FILES = ["__init__.py", "knowledge_base.py", "providers.py", "rag_pipeline.py", "retrieval.py"]
 
 
 def main():

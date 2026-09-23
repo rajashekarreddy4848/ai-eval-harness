@@ -24,12 +24,15 @@ them needs a different toolkit — this repo covers the three main approaches:
 ```
 app/
   knowledge_base.py   # 6 sample FAQ docs (refunds, shipping, accounts, etc.)
-  rag_pipeline.py      # TF-IDF retrieval + LLM generation (kept simple on purpose)
+  rag_pipeline.py      # retrieval + LLM generation (kept simple on purpose)
+  retrieval.py         # lexical retrievers: word, word_stop, char n-gram, hybrid (default)
   providers.py         # picks the generator and a *different* judge model
   eval_model.py        # points deepeval and ragas at the judge (not OpenAI)
 evals/
   golden_set.json      # 35 labeled questions shared by every suite
   golden.py            # loader, smoke/full subsets, output normalization
+  holdout_set.json     # 15 questions written before retrieval tuning, scored once
+  compare_retrievers.py # hit@k and MRR for every retriever (no API calls)
 tests/
   test_retrieval.py    # does retrieval return the right doc? (no LLM, free)
   test_golden_set.py   # checks the labels themselves (unique, docs exist, facts in docs)
@@ -105,10 +108,55 @@ promptfoo always run the full set.
   wrong answer pass `not-icontains`. Both promptfoo and the Python checks now
   normalize output first.
 
-The 7 retrieval misses are marked `xfail(strict=True)` in `tests/test_retrieval.py`
+The 7 retrieval misses were marked `xfail(strict=True)` in `tests/test_retrieval.py`
 with their causes, so fixing one makes the suite demand the marker's removal.
 
-The RAG app itself is intentionally minimal (TF-IDF instead of a vector DB,
+### Fixing retrieval, measured
+
+Four lexical retrievers were compared with `evals/compare_retrievers.py`. The
+15-question held-out set was written **before** any tuning and scored once,
+after the choice was made:
+
+| Retriever | Golden hit@2 (tuned on) | Held-out hit@2 |
+|---|---|---|
+| word (original) | 23/30 (77%) | 14/15 |
+| word_stop (drop stop words) | 27/30 (90%) | 13/15 |
+| char (3-5 char n-grams) | 26/30 (87%) | 15/15 |
+| **hybrid** (word_stop + char, averaged) | **28/30 (93%)** | **15/15** |
+
+`word_stop` is the cautionary one: it improved on the golden set it was picked
+on and got *worse* than the original on held-out questions. Hybrid is best on
+both, so it's the default. Held-out gains are small (14 to 15) because the
+original already did well on those questions; they are easier than the golden
+set's typo and multi-doc cases.
+
+While comparing, the harness itself had a bug: when a query shares no words with
+any doc, every score is 0 and the sort returns the first docs in the knowledge
+base. `word_stop` got two "hits" that way. Docs with score 0 are no longer
+retrieved, so those queries now get no context and an honest "I don't know".
+
+End to end, same golden set, before and after:
+
+| Measure | word | hybrid |
+|---|---|---|
+| promptfoo, all 36 cases | 29 pass | 33 pass |
+| deepeval smoke (4 metrics) | 27/29 | 29/29 |
+| ragas faithfulness / context recall | 0.86 / 0.81 | 1.00 / 1.00 |
+| ragas context precision | 0.64 | 0.79 |
+
+Still open:
+
+- **REF-04** ("money back") and **FPR-03** ("Enterprise plan") need meaning, not
+  spelling; lexical retrieval can't get them. Embeddings would be the next step.
+- **Ranking:** for plan questions hybrid returns the pricing doc second, behind
+  Data Export. Answers are right, but that's why context precision is below 1.
+- **OOS-05, a flaky failure that one run hid.** "Write me a short poem about
+  shipping" passed in the first golden run, then failed. Rerun 6 times, the bot
+  wrote the poem 6/6 with the old retriever and 4/6 with hybrid. It's a prompt
+  problem (a support bot shouldn't do creative writing), not a retrieval
+  regression, and single runs of LLM evals can't be trusted for it.
+
+The RAG app itself is intentionally minimal (lexical TF-IDF instead of a vector DB,
 6 FAQ docs instead of a real corpus) — the point of this project is the
 **test harness around it**, not the app.
 
@@ -168,7 +216,7 @@ Hugging Face Space runs the same code the tests check.
 
 ## Possible extensions
 
-- Swap TF-IDF retrieval for a real vector DB (Chroma/Pinecone) + embeddings
+- Add embeddings (hybrid with the lexical retriever) for the synonym cases REF-04 and FPR-03
 - Add an adversarial/red-team test set (prompt injection, jailbreak attempts)
+- Run each LLM-graded case several times and gate on pass rate, to catch flaky failures like OOS-05
 - Track eval scores over time (regression detection across commits)
-- Add a second LLM provider to compare quality/cost tradeoffs

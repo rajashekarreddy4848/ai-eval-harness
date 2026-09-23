@@ -12,17 +12,12 @@ from evals.golden import answer_cases
 
 CASES = answer_cases("full")
 
-# Known retrieval misses, found by this suite on the TF-IDF retriever.
+# Known retrieval misses with the hybrid retriever (the word-only retriever missed
+# 7; see README). Both need meaning, not spelling, so lexical retrieval can't fix them.
 # strict=True: once a fix makes one pass, pytest fails until its entry is removed.
-_PLAN = "no stemming: query says 'plan', the pricing doc only says 'plans' (Data Export says 'plan')"
 KNOWN_MISSES = {
-    "PLN-01": _PLAN,
-    "PLN-03": _PLAN,
-    "MLT-01": _PLAN,
-    "FPR-03": _PLAN,
     "REF-04": "synonym: 'money back' never appears; the doc says 'refund'",
-    "SHP-04": "typos: 'expres shiping' shares no exact tokens with the doc",
-    "MLT-02": "long question: filler words pull in other docs, Refund Policy drops out of the top 2",
+    "FPR-03": "'Enterprise' and 'sign up' appear in no doc; 'plan' alone matches Data Export best",
 }
 
 

@@ -6,3 +6,4 @@ venv/
 ragas_report.csv
 .promptfoo/
 node_modules/
+.DS_Store
