@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch: # "Run workflow" button in the Actions tab
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
 
 jobs:
   unit:
@@ -23,6 +25,9 @@ jobs:
 
   eval:
     needs: unit
+    # LLM evals spend free-tier quota (Gemini allows 500 judge calls a day), so they
+    # run on demand and weekly, not on every push. The unit job guards every push.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     env:
       # Groq answers, Gemini grades: the judge is a different model from the generator.

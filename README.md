@@ -250,10 +250,22 @@ EVAL_SUBSET=full pytest tests/test_deepeval.py -v     # all 35 cases
 python tests/test_ragas.py
 ```
 
-CI runs all three automatically on every push via
-[`.github/workflows/eval.yml`](.github/workflows/eval.yml) and uploads the
-ragas report as a build artifact. It needs `GROQ_API_KEY` and `GEMINI_API_KEY`
-as repository secrets.
+CI ([`.github/workflows/eval.yml`](.github/workflows/eval.yml)) has two jobs:
+
+- **unit**, on every push and pull request: golden-set and red-team label checks,
+  retrieval tests, and unit tests. No API keys, about a minute.
+- **eval**, from the "Run workflow" button and every Monday: deepeval, promptfoo
+  (golden and red team), a report-only run of known issues, and the ragas report
+  as a build artifact. It needs `GROQ_API_KEY` and `GEMINI_API_KEY` as
+  repository secrets.
+
+The eval job doesn't run on every push because of quota. The first CI run passed
+25 of 29 deepeval tests and failed the other 4 on infrastructure: Gemini's free
+tier allows 500 judge calls a day, local runs had used most of them, and one call
+got a 503. The judge also retried the daily-quota error every 57 seconds, with the
+OpenAI SDK's own retries stacked on top, so the job took 53 minutes. Now a daily
+quota fails at once with a clear `JudgeQuotaExhausted` error, the SDK doesn't
+retry, and only per-minute limits and 5xx errors are retried.
 
 After changing anything in `app/`, run `python scripts/sync_space.py` so the
 Hugging Face Space runs the same code the tests check.

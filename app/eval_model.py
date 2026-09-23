@@ -16,8 +16,18 @@ from app.providers import Provider, judge_provider
 
 # Free tiers allow only a few judge calls per minute, so a rate-limit error means
 # "wait", not "the answer failed". Retry it instead of reporting a failed test.
+# A per-DAY quota is different: waiting a minute won't help, so fail at once.
 MAX_RATE_LIMIT_RETRIES = int(os.environ.get("JUDGE_MAX_RETRIES", "8"))
 JUDGE_MAX_TOKENS = int(os.environ.get("JUDGE_MAX_TOKENS", "900"))
+
+
+class JudgeQuotaExhausted(RuntimeError):
+    """The judge's daily quota is used up: an infrastructure problem, not a failed answer."""
+
+
+def _is_daily_quota(error) -> bool:
+    # Gemini names the quota, e.g. GenerateRequestsPerDayPerProjectPerModel-FreeTier.
+    return "PerDay" in str(error)
 
 
 def _retry_delay(error, attempt: int) -> float:
@@ -42,10 +52,12 @@ class OpenAICompatibleJudge(DeepEvalBaseLLM):
     def load_model(self):
         from openai import OpenAI
 
-        return OpenAI(api_key=self.provider.api_key, base_url=self.provider.base_url)
+        # max_retries=0: generate() does the retrying. The SDK's own retries stacked
+        # on top turned one exhausted quota into ~15 minutes of waiting per test in CI.
+        return OpenAI(api_key=self.provider.api_key, base_url=self.provider.base_url, max_retries=0)
 
     def generate(self, prompt: str) -> str:
-        from openai import RateLimitError
+        from openai import APIConnectionError, InternalServerError, RateLimitError
 
         for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
             try:
@@ -57,9 +69,20 @@ class OpenAICompatibleJudge(DeepEvalBaseLLM):
                 )
                 return response.choices[0].message.content
             except RateLimitError as error:
+                if _is_daily_quota(error):
+                    raise JudgeQuotaExhausted(
+                        f"{self.get_model_name()} has used its daily free-tier quota; waiting "
+                        "won't help. Gemini resets at midnight Pacific time, or set JUDGE_MODEL "
+                        "to another model."
+                    ) from error
                 if attempt == MAX_RATE_LIMIT_RETRIES:
                     raise
                 time.sleep(_retry_delay(error, attempt))
+            except (InternalServerError, APIConnectionError):
+                # 5xx or network trouble ("503 service unavailable"): usually temporary.
+                if attempt == MAX_RATE_LIMIT_RETRIES:
+                    raise
+                time.sleep(min(5 * 2**attempt, 60))
 
     async def a_generate(self, prompt: str) -> str:
         return self.generate(prompt)
@@ -91,6 +114,6 @@ def get_ragas_llm():
             base_url=judge.base_url,
             temperature=0,
             max_tokens=JUDGE_MAX_TOKENS,
-            max_retries=MAX_RATE_LIMIT_RETRIES,
+            max_retries=3,  # langchain retries 429s too, so keep a daily-quota failure short
         )
     )
