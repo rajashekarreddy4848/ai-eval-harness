@@ -1,0 +1,15 @@
+# Render Blueprint for the live demo (https://render.com/docs/blueprint-spec).
+# The chatbot lives in huggingface_space/ (it was built for a Hugging Face Space).
+services:
+  - type: web
+    name: faq-rag-eval-bot
+    runtime: python
+    plan: free
+    rootDir: huggingface_space
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false # Render asks for the value when the Blueprint is created
+      - key: PYTHON_VERSION
+        value: 3.11.9 # the version the test suite runs on

@@ -1,9 +1,11 @@
-"""Gradio chat UI for the FAQ RAG bot, deployed as a Hugging Face Space.
+"""Gradio chat UI for the FAQ RAG bot, deployed on Render (see render.yaml).
 
 This is the same RAG pipeline used in the eval harness (see the main repo's
 README for the promptfoo/deepeval/ragas test suite) -- this file just wraps
 it in a live, clickable demo.
 """
+
+import os
 
 import gradio as gr
 
@@ -35,4 +37,7 @@ demo = gr.ChatInterface(
 )
 
 if __name__ == "__main__":
-    demo.launch()
+    # Hosts like Render pass the port in PORT and need the app reachable from outside
+    # the container. Locally, with no PORT, stay on localhost:7860.
+    port = os.environ.get("PORT")
+    demo.launch(server_name="0.0.0.0" if port else "127.0.0.1", server_port=int(port or 7860))

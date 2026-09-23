@@ -49,7 +49,7 @@ tests/
     golden_tests.py        # turns the golden set into promptfoo test cases
     promptfooconfig.redteam.yaml, redteam_tests.py  # red-team suite
 scripts/sync_space.py     # copies app/ into huggingface_space/app/
-huggingface_space/        # Gradio demo deployed as a Hugging Face Space
+huggingface_space/        # Gradio demo, deployed on Render via render.yaml (HF Gradio Spaces now need PRO)
 .github/workflows/eval.yml # CI: unit job on every PR, then the three eval suites
 ```
 
