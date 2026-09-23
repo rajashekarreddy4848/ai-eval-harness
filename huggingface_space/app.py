@@ -29,7 +29,7 @@ demo = gr.ChatInterface(
         "A small retrieval-augmented chatbot over a 6-document FAQ knowledge base "
         "(refunds, shipping, accounts, passwords, plans, data export). "
         "Built alongside a full automated eval/testing harness (promptfoo, deepeval, ragas) "
-        "-- see the [GitHub repo](https://github.com) for the test suite and CI pipeline."
+        "-- see the [GitHub repo](https://github.com/rajashekarreddy4848/ai-eval-harness) for the test suite and CI pipeline."
     ),
     examples=EXAMPLES,
 )
