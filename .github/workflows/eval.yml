@@ -71,9 +71,11 @@ jobs:
         continue-on-error: true
         env:
           KNOWN_ISSUES: only
+        # Run both even if the first fails (a failing command would end the step), and
+        # show each still-failing known issue as a warning on the run page.
         run: |
-          promptfoo eval --no-cache
-          promptfoo eval -c promptfooconfig.redteam.yaml --no-cache
+          promptfoo eval --no-cache || echo "::warning::Golden-set known issues still fail (expected until retrieval is fixed)"
+          promptfoo eval -c promptfooconfig.redteam.yaml --no-cache || echo "::warning::Red-team known issues still fail (expected until retrieval is fixed)"
 
       - name: Run ragas quality report
         run: python tests/test_ragas.py
