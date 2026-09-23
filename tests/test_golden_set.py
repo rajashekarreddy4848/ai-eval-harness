@@ -69,6 +69,27 @@ def test_smoke_subset_has_both_behaviors():
     assert len(load_cases("smoke")) < len(load_cases("full"))
 
 
+def test_known_issues_are_explained():
+    for case in CASES:
+        if "known_issue" in case:
+            assert isinstance(case["known_issue"], str) and len(case["known_issue"]) > 20, case["id"]
+
+
+@pytest.mark.parametrize("mode, expected", [("exclude", ["A"]), ("only", ["B"]), ("include", ["A", "B"])])
+def test_select_known_issues(monkeypatch, mode, expected):
+    from evals.golden import select_known_issues
+    monkeypatch.setenv("KNOWN_ISSUES", mode)
+    cases = [{"id": "A"}, {"id": "B", "known_issue": "retrieval miss"}]
+    assert [c["id"] for c in select_known_issues(cases)] == expected
+
+
+def test_unknown_known_issues_mode_is_rejected(monkeypatch):
+    from evals.golden import select_known_issues
+    monkeypatch.setenv("KNOWN_ISSUES", "maybe")
+    with pytest.raises(ValueError):
+        select_known_issues([])
+
+
 def test_unknown_subset_is_rejected():
     with pytest.raises(ValueError):
         load_cases("everything")

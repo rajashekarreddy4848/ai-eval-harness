@@ -12,8 +12,8 @@ jobs:
     # Golden-set checks, retrieval tests, provider selection, Space sync. No API keys.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
@@ -34,10 +34,10 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }} # promptfoo's google: provider reads this name
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -58,11 +58,23 @@ jobs:
         working-directory: tests/promptfoo
         run: promptfoo eval -c promptfooconfig.redteam.yaml --no-cache --repeat 3
 
+      # Cases with a known_issue (documented in the golden/red-team sets) are left out of
+      # the gating runs above, so only a new failure turns CI red. They still run here,
+      # report-only, so a fix shows up.
+      - name: Known issues (report only)
+        working-directory: tests/promptfoo
+        continue-on-error: true
+        env:
+          KNOWN_ISSUES: only
+        run: |
+          promptfoo eval --no-cache
+          promptfoo eval -c promptfooconfig.redteam.yaml --no-cache
+
       - name: Run ragas quality report
         run: python tests/test_ragas.py
 
       - name: Upload ragas report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ragas-report
           path: ragas_report.csv

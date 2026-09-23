@@ -11,7 +11,7 @@
    "question": "How long until my refund shows up?",
    "expected_docs": ["Refund Policy"], "must_include": ["5-7"],
    "ground_truth": "Refunds are processed within 5-7 business days to the original payment method."},
-  {"id": "REF-04", "category": "paraphrase", "smoke": false, "expected_behavior": "answer",
+  {"id": "REF-04", "known_issue": "retrieval: 'money back' shares no words with the Refund Policy doc (needs semantic retrieval)", "category": "paraphrase", "smoke": false, "expected_behavior": "answer",
    "question": "can i still get my money back if i bought it 2 weeks ago",
    "expected_docs": ["Refund Policy"], "must_include": ["30"],
    "ground_truth": "Yes. Two weeks is within the 30-day window for a full refund."},

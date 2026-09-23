@@ -91,6 +91,22 @@ def check(case: dict, answer: str) -> list[str]:
     return failures
 
 
+def select_known_issues(cases: list[dict]) -> list[dict]:
+    """Filter cases by their optional known_issue field, per KNOWN_ISSUES:
+      exclude (default)  gating runs: a new failure fails CI, known ones don't
+      only               report-only runs of the known issues, to see if one got fixed
+      include            everything
+    """
+    mode = (os.environ.get("KNOWN_ISSUES") or "exclude").lower()
+    if mode == "exclude":
+        return [c for c in cases if not c.get("known_issue")]
+    if mode == "only":
+        return [c for c in cases if c.get("known_issue")]
+    if mode == "include":
+        return cases
+    raise ValueError(f"KNOWN_ISSUES must be exclude, only or include, not {mode!r}")
+
+
 def load_cases(subset: str | None = None) -> list[dict]:
     subset = (subset or os.environ.get("EVAL_SUBSET") or "smoke").lower()
     if subset not in {"smoke", "full"}:

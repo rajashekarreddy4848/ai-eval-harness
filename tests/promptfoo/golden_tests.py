@@ -5,13 +5,14 @@ Promptfoo runs every golden case (not just the smoke subset): each case is one
 generation plus at most one grader call, so the full set is cheap enough.
 """
 
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from evals.golden import load_cases  # noqa: E402
+from evals.golden import load_cases, select_known_issues  # noqa: E402
 
 DECLINE_RUBRIC = (
     "The answer says it doesn't know or that the information isn't available, "
@@ -50,6 +51,7 @@ def generate_tests(config=None):
             "assert": _asserts(case),
             "metadata": {"id": case["id"], "category": case["category"]},
         }
-        for case in load_cases("full")
+        for case in select_known_issues(load_cases("full"))
     ]
-    return tests + EXTRA_TESTS
+    # The non-functional checks belong to the gating run, not the known-issues report.
+    return tests if os.environ.get("KNOWN_ISSUES") == "only" else tests + EXTRA_TESTS

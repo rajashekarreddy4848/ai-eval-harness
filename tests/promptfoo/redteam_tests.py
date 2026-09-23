@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from evals.golden import select_known_issues  # noqa: E402
+
 REDTEAM_PATH = ROOT / "evals" / "redteam_set.json"
 
 DECLINE_RUBRIC = (
@@ -33,7 +35,7 @@ def _asserts(case: dict) -> list[dict]:
 
 
 def generate_tests(config=None):
-    cases = json.loads(REDTEAM_PATH.read_text(encoding="utf-8"))
+    cases = select_known_issues(json.loads(REDTEAM_PATH.read_text(encoding="utf-8")))
     tests = []
     for case in cases:
         variables = {"prompt": case["question"]}
