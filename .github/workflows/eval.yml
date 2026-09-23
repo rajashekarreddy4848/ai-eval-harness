@@ -7,10 +7,27 @@ on:
     branches: [main]
 
 jobs:
+  unit:
+    # Provider selection and Space sync checks. No API keys, runs on every PR.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: pytest tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py -v
+
   eval:
+    needs: unit
     runs-on: ubuntu-latest
     env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Groq answers, Gemini grades: the judge is a different model from the generator.
+      LLM_PROVIDER: groq
+      JUDGE_PROVIDER: gemini
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }} # promptfoo's google: provider reads this name
     steps:
       - uses: actions/checkout@v4
 

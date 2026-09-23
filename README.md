@@ -17,22 +17,43 @@ them needs a different toolkit — this repo covers the three main approaches:
 |---|---|---|---|
 | Regression assertions | [promptfoo](https://promptfoo.dev) | Exact/contains checks, LLM-graded rubrics, latency | Assertion-based test cases in a CI gate |
 | Output quality metrics | [deepeval](https://deepeval.com) | Hallucination, answer relevancy, faithfulness | pytest suite with pass/fail thresholds |
-| RAG-specific scoring | [ragas](https://docs.ragas.io) | Context precision/recall, faithfulness (dataset-level) | A quality dashboard / test report across a golden set |
+| RAG-specific scoring | [ragas](https://docs.ragas.io) | Context precision/recall, faithfulness (dataset-level). Answer relevancy is left to deepeval because ragas needs an embeddings model for it. | A quality dashboard / test report across a golden set |
 
 ## Architecture
 
 ```
 app/
   knowledge_base.py   # 6 sample FAQ docs (refunds, shipping, accounts, etc.)
-  rag_pipeline.py      # TF-IDF retrieval + Claude generation (kept simple on purpose)
+  rag_pipeline.py      # TF-IDF retrieval + LLM generation (kept simple on purpose)
+  providers.py         # picks the generator and a *different* judge model
+  eval_model.py        # points deepeval and ragas at the judge (not OpenAI)
 tests/
   test_deepeval.py     # pytest suite: hallucination / relevancy / faithfulness gates
   test_ragas.py         # scored report across a golden eval set -> ragas_report.csv
+  test_providers.py     # unit tests for generator/judge selection (no API calls)
+  test_space_sync.py    # fails if the Hugging Face Space copy drifts from app/
+  test_judge_retry.py   # unit tests for the judge's rate-limit backoff
   promptfoo/
     promptfooconfig.yaml  # regression test cases (rubrics, contains, latency)
     provider.py            # bridges promptfoo -> our RAG pipeline
-.github/workflows/eval.yml # CI: runs all three suites on every push/PR
+scripts/sync_space.py     # copies app/ into huggingface_space/app/
+huggingface_space/        # Gradio demo deployed as a Hugging Face Space
+.github/workflows/eval.yml # CI: unit job on every PR, then the three eval suites
 ```
+
+### Generator vs. judge
+
+LLM-graded metrics need a second model to do the grading. If the model that
+wrote an answer also grades it, scores come out too kind (self-grading bias).
+`app/providers.py` picks the generator from the first available key (Groq,
+then Gemini, then Anthropic) and the judge from the next one. With only one key
+the suites still run but warn that the model is grading itself. CI uses Groq
+(`openai/gpt-oss-120b`) to answer and Gemini (`gemini-3.5-flash-lite`) to judge.
+`JUDGE_MODEL` picks a different judge model, including one on the same provider.
+
+Free tiers allow only a handful of judge calls per minute, so the judge waits
+and retries on rate-limit errors instead of reporting them as failed tests. The
+deepeval suite takes about 4 minutes on free tiers for that reason.
 
 The RAG app itself is intentionally minimal (TF-IDF instead of a vector DB,
 6 FAQ docs instead of a real corpus) — the point of this project is the
@@ -44,13 +65,17 @@ The RAG app itself is intentionally minimal (TF-IDF instead of a vector DB,
 pip install -r requirements.txt
 npm install -g promptfoo   # only needed for the promptfoo suite
 
-export ANTHROPIC_API_KEY=your_key_here
+cp .env.example .env       # then add GROQ_API_KEY and GEMINI_API_KEY (both free)
 ```
 
 ## Running the suites
 
 ```bash
+# 0. Unit tests, no API keys needed
+pytest tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py
+
 # 1. Regression tests (fast, deterministic assertions + rubric grading)
+#    promptfoo's Gemini grader reads GOOGLE_API_KEY: export GOOGLE_API_KEY=$GEMINI_API_KEY
 cd tests/promptfoo && promptfoo eval
 
 # 2. Quality gates as pytest (hallucination / relevancy / faithfulness thresholds)
@@ -62,7 +87,11 @@ python tests/test_ragas.py
 
 CI runs all three automatically on every push via
 [`.github/workflows/eval.yml`](.github/workflows/eval.yml) and uploads the
-ragas report as a build artifact.
+ragas report as a build artifact. It needs `GROQ_API_KEY` and `GEMINI_API_KEY`
+as repository secrets.
+
+After changing anything in `app/`, run `python scripts/sync_space.py` so the
+Hugging Face Space runs the same code the tests check.
 
 ## What this demonstrates (for interviews / resume)
 

@@ -5,12 +5,11 @@ runs cheaply and the focus stays on the EVAL/TEST harness, not the app itself.
 Supports Groq/Gemini (free tiers) and Anthropic (paid) as providers.
 """
 
-import os
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.knowledge_base import DOCS
+from app.providers import PROVIDERS, generator_provider
 
 _vectorizer = TfidfVectorizer()
 _doc_texts = [d["text"] for d in DOCS]
@@ -55,36 +54,19 @@ def generate_answer(query: str) -> dict:
 
 
 def _call_llm(system_prompt: str, user_prompt: str) -> str:
-    """Calls whichever LLM provider has a key configured.
-
-    Checked in order: GROQ_API_KEY (free tier), GEMINI_API_KEY (free tier),
-    ANTHROPIC_API_KEY (paid). Set LLM_PROVIDER explicitly to force one.
-    """
-    provider = os.environ.get("LLM_PROVIDER")
-
-    if provider == "groq" or (provider is None and os.environ.get("GROQ_API_KEY")):
-        return _call_groq(system_prompt, user_prompt)
-    if provider == "gemini" or (provider is None and os.environ.get("GEMINI_API_KEY")):
-        return _call_gemini(system_prompt, user_prompt)
-    if provider == "anthropic" or (provider is None and os.environ.get("ANTHROPIC_API_KEY")):
-        return _call_anthropic(system_prompt, user_prompt)
-
-    raise RuntimeError(
-        "No LLM API key found. Set one of GROQ_API_KEY, GEMINI_API_KEY, or "
-        "ANTHROPIC_API_KEY in your environment."
-    )
+    """Calls the generator provider (see app/providers.py for how it is chosen)."""
+    calls = {"groq": _call_groq, "gemini": _call_gemini, "anthropic": _call_anthropic}
+    return calls[generator_provider().name](system_prompt, user_prompt)
 
 
 def _call_groq(system_prompt: str, user_prompt: str) -> str:
     """Free tier: https://console.groq.com — no card required."""
     from openai import OpenAI
 
-    client = OpenAI(
-        api_key=os.environ["GROQ_API_KEY"],
-        base_url="https://api.groq.com/openai/v1",
-    )
+    groq = PROVIDERS["groq"]
+    client = OpenAI(api_key=groq.api_key, base_url=groq.base_url)
     response = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model=groq.model,
         max_tokens=300,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -99,9 +81,10 @@ def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    gemini = PROVIDERS["gemini"]
+    client = genai.Client(api_key=gemini.api_key)
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model=gemini.model,
         contents=user_prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_prompt, max_output_tokens=300
@@ -114,9 +97,10 @@ def _call_anthropic(system_prompt: str, user_prompt: str) -> str:
     """Requires paid credits: https://console.anthropic.com/settings/billing"""
     import anthropic
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    claude = PROVIDERS["anthropic"]
+    client = anthropic.Anthropic(api_key=claude.api_key)
     response = client.messages.create(
-        model="claude-sonnet-5",
+        model=claude.model,
         max_tokens=300,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],

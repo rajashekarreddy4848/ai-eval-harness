@@ -3,10 +3,21 @@ description: "Regression test suite for the FAQ RAG bot"
 providers:
   - id: "python:provider.py"
 
-# Grading of llm-rubric assertions uses this model as the judge.
+# Grading of llm-rubric assertions uses this model as the judge. It should differ
+# from the generator (LLM_PROVIDER, Groq by default) to avoid self-grading.
+# Override without editing this file: promptfoo eval --grader groq:openai/gpt-oss-120b
 defaultTest:
   options:
-    provider: "anthropic:messages:claude-sonnet-5"
+    provider: "google:gemini-3.5-flash-lite"
+    # LLMs write typographic characters: "30<U+202F>days", "I don’t know". Without this,
+    # icontains "30 days" fails on a correct answer and not-icontains "I don't know"
+    # passes on a wrong one. NFKC turns special spaces into plain spaces; then curly
+    # quotes and non-breaking hyphens become their ASCII forms.
+    transform: >-
+      output.normalize('NFKC')
+      .replace(/[‘’]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/[‐‑]/g, '-')
 
 tests:
   - description: "Refund window is stated correctly"

@@ -8,7 +8,12 @@ https://www.promptfoo.dev/docs/providers/python/
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(ROOT / ".env")
 
 from app.rag_pipeline import generate_answer  # noqa: E402
 

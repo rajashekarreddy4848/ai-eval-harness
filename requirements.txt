@@ -3,8 +3,11 @@ openai>=1.40.0
 google-genai>=0.3.0
 scikit-learn>=1.4.0
 pytest>=8.0.0
-deepeval>=1.4.0
+python-dotenv>=1.0.0
+# 4.x: HallucinationMetric passes when score >= threshold. 1.x scored it the other way.
+deepeval>=4.2,<5
 ragas>=0.2.0,<0.3.0
 langchain-community==0.3.19
+langchain-openai>=0.3,<0.4
 datasets>=2.19.0
 pandas>=2.2.0
