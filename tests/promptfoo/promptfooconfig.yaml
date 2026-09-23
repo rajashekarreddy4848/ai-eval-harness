@@ -9,54 +9,14 @@ providers:
 defaultTest:
   options:
     provider: "google:gemini-3.5-flash-lite"
-    # LLMs write typographic characters: "30<U+202F>days", "I don’t know". Without this,
-    # icontains "30 days" fails on a correct answer and not-icontains "I don't know"
-    # passes on a wrong one. NFKC turns special spaces into plain spaces; then curly
-    # quotes and non-breaking hyphens become their ASCII forms.
+    # LLMs write typographic characters: "30<U+202F>days", "I don<U+2019>t know", "5<U+2013>7".
+    # Without this, icontains "30 days" fails on a correct answer and not-icontains
+    # "I don't know" passes on a wrong one. Same rules as evals/golden.py normalize().
     transform: >-
       output.normalize('NFKC')
-      .replace(/[‘’]/g, "'")
-      .replace(/[“”]/g, '"')
-      .replace(/[‐‑]/g, '-')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2010-\u2014]/g, '-')
 
-tests:
-  - description: "Refund window is stated correctly"
-    vars:
-      prompt: "How many days do I have to request a refund?"
-    assert:
-      - type: icontains
-        value: "30 days"
-      - type: llm-rubric
-        value: "Answer clearly states the refund window and does not mention shipping or passwords"
-
-  - description: "Doesn't hallucinate an answer outside the knowledge base"
-    vars:
-      prompt: "What is your company's CEO's name?"
-    assert:
-      - type: llm-rubric
-        value: "Answer says it doesn't know or the information isn't available, rather than making up a name"
-
-  - description: "Password reset link expiry is correct"
-    vars:
-      prompt: "How long is the password reset link valid for?"
-    assert:
-      - type: icontains
-        value: "1 hour"
-
-  - description: "Pricing question stays on-topic and factual"
-    vars:
-      prompt: "How much does the Pro plan cost?"
-    assert:
-      - type: icontains
-        value: "$12"
-      - type: not-icontains
-        value: "I don't know"
-
-  - description: "Answer stays concise (SDET-style non-functional check)"
-    vars:
-      prompt: "What are the shipping options?"
-    assert:
-      - type: latency
-        threshold: 8000
-      - type: llm-rubric
-        value: "Answer is 3 sentences or fewer"
+# Cases come from evals/golden_set.json (see golden_tests.py).
+tests: file://golden_tests.py:generate_tests

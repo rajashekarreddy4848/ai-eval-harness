@@ -8,7 +8,7 @@ on:
 
 jobs:
   unit:
-    # Provider selection and Space sync checks. No API keys, runs on every PR.
+    # Golden-set checks, retrieval tests, provider selection, Space sync. No API keys.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: pytest tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py -v
+      - run: pytest tests/test_golden_set.py tests/test_retrieval.py tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py -v
 
   eval:
     needs: unit
@@ -25,6 +25,8 @@ jobs:
       # Groq answers, Gemini grades: the judge is a different model from the generator.
       LLM_PROVIDER: groq
       JUDGE_PROVIDER: gemini
+      # deepeval and ragas grade the smoke subset; promptfoo always runs the full golden set.
+      EVAL_SUBSET: smoke
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }} # promptfoo's google: provider reads this name
