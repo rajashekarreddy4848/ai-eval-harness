@@ -90,7 +90,7 @@
    "ground_truth": "Settings > Data > Export."},
   {"id": "EXP-03", "category": "single-doc", "smoke": false, "expected_behavior": "answer",
    "question": "How often can Free plan users export their data?",
-   "expected_docs": ["Data Export"], "must_include": ["once"],
+   "expected_docs": ["Data Export"], "must_include": [["once", "one export", "1 export"]],
    "ground_truth": "Free plan users can export CSV only, once per month."},
 
   {"id": "MLT-01", "category": "multi-doc", "smoke": true, "expected_behavior": "answer",

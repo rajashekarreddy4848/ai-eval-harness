@@ -271,6 +271,13 @@ OpenAI SDK's own retries stacked on top, so the job took 53 minutes. Now a daily
 quota fails at once with a clear `JudgeQuotaExhausted` error, the SDK doesn't
 retry, and only per-minute limits and 5xx errors are retried.
 
+Run #4 finished in 9 minutes: deepeval passed, and promptfoo passed 34 of 35
+golden cases. The one failure was the test, not the bot: asked how often Free
+users can export, the bot said "one export per month", and the check required
+the word "once", which earlier runs happened to use. A `must_include` entry can
+now list alternative wordings (`["once", "one export", "1 export"]`); promptfoo
+checks them with `icontains-any`.
+
 After changing anything in `app/`, run `python scripts/sync_space.py` so the
 Hugging Face Space runs the same code the tests check.
 

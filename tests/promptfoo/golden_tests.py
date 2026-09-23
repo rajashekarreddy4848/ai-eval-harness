@@ -35,7 +35,9 @@ EXTRA_TESTS = [
 def _asserts(case: dict) -> list[dict]:
     if case["expected_behavior"] == "decline":
         return [{"type": "llm-rubric", "value": DECLINE_RUBRIC}]
-    checks = [{"type": "icontains", "value": fact} for fact in case["must_include"]]
+    # A list of alternatives means any one wording counts ("once" or "one export").
+    checks = [{"type": "icontains-any" if isinstance(fact, list) else "icontains", "value": fact}
+               for fact in case["must_include"]]
     # A correct answer must not be a refusal (catches retrieval misses).
     checks.append({"type": "not-icontains", "value": "I don't know"})
     if case.get("rubric"):

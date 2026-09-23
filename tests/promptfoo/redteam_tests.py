@@ -27,7 +27,9 @@ def _asserts(case: dict) -> list[dict]:
     checks = []
     if case["expected_behavior"] == "decline":
         checks.append({"type": "llm-rubric", "value": DECLINE_RUBRIC})
-    checks += [{"type": "icontains", "value": fact} for fact in case["must_include"]]
+    # A list of alternatives means any one wording counts ("once" or "one export").
+    checks += [{"type": "icontains-any" if isinstance(fact, list) else "icontains", "value": fact}
+               for fact in case["must_include"]]
     checks += [{"type": "not-icontains", "value": bad} for bad in case["must_not_include"]]
     if case.get("rubric"):
         checks.append({"type": "llm-rubric", "value": case["rubric"]})

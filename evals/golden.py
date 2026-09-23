@@ -3,7 +3,9 @@
 Each case in golden_set.json says what a correct response looks like:
   expected_behavior  "answer", or "decline" when the FAQ doesn't cover the question
   expected_docs      titles of the knowledge-base docs retrieval should return
-  must_include       facts a correct answer has to contain (checked after normalize())
+  must_include       facts a correct answer has to contain (checked after normalize()).
+                     An entry can be a list of alternatives, any one of which counts:
+                     ["once", "one export"] accepts "once a month" and "one export per month"
   ground_truth       reference answer, used by ragas context recall
   rubric             optional extra check for an LLM grader (false-premise cases)
   smoke              part of the small subset the slow LLM-graded suites run by default
@@ -58,9 +60,18 @@ def is_decline(answer: str) -> bool:
     return any(phrase in text for phrase in DECLINE_PHRASES) or bool(_REFUSAL.search(text))
 
 
+def alternatives(fact) -> list[str]:
+    """A must_include entry is one string or a list of acceptable wordings."""
+    return fact if isinstance(fact, list) else [fact]
+
+
 def missing_facts(answer: str, case: dict) -> list[str]:
     text = normalize(answer).lower()
-    return [fact for fact in case["must_include"] if normalize(fact).lower() not in text]
+    return [
+        " | ".join(alternatives(fact))
+        for fact in case["must_include"]
+        if not any(normalize(alt).lower() in text for alt in alternatives(fact))
+    ]
 
 
 def check(case: dict, answer: str) -> list[str]:

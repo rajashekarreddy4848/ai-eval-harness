@@ -10,7 +10,7 @@ import pytest
 
 from app.knowledge_base import DOCS
 from evals.golden import (
-    BEHAVIORS, GOLDEN_PATH, answer_cases, decline_cases, is_decline, load_cases,
+    BEHAVIORS, GOLDEN_PATH, alternatives, answer_cases, decline_cases, is_decline, load_cases,
     missing_facts, normalize,
 )
 
@@ -50,7 +50,8 @@ def test_facts_appear_in_expected_docs(case):
     derived = case["category"] == "numeric-reasoning" or case["id"] == "REF-04"
     for fact in case["must_include"]:
         if not derived:
-            assert normalize(fact).lower() in source, f"{fact!r} is not in {case['expected_docs']}"
+            alts = alternatives(fact)
+            assert any(normalize(a).lower() in source for a in alts), f"{alts!r}: none is in {case['expected_docs']}"
 
 
 def test_every_doc_is_covered():
@@ -113,6 +114,12 @@ def test_is_decline():
     assert not is_decline("You have 30 days to request a refund.")
     # "can't" about the user, not the bot, is not a refusal
     assert not is_decline("Free plan users can't export JSON; Pro costs $12/month.")
+
+
+def test_missing_facts_accepts_any_alternative():
+    case = {"must_include": [["once", "one export"], "CSV"]}
+    assert missing_facts("Free users get one export per month, CSV only.", case) == []
+    assert missing_facts("Free users can export CSV.", case) == ["once | one export"]
 
 
 def test_missing_facts_ignores_typography():
