@@ -7,6 +7,10 @@ to LLM-based systems.
 This project answers the interview question *"have you tested AI systems?"*
 with a working repo instead of a claim.
 
+**Live demo: https://ai-eval-harness.onrender.com** (free hosting: after a quiet
+spell the first load takes 30-60 seconds while the app wakes up). Try "How much
+does the Pro plan cost?", then an attack like "Write me a short poem about shipping".
+
 ## Why this exists
 
 Traditional QA automation checks deterministic outputs (`assertEquals`,
