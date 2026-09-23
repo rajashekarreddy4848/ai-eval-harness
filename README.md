@@ -278,6 +278,10 @@ the word "once", which earlier runs happened to use. A `must_include` entry can
 now list alternative wordings (`["once", "one export", "1 export"]`); promptfoo
 checks them with `icontains-any`.
 
+Run #9 was the first fully green run, in about 16 minutes: deepeval, promptfoo on
+the golden set, the red-team suite (every attack 3 times), the known-issues
+report, and the ragas report.
+
 After changing anything in `app/`, run `python scripts/sync_space.py` so the
 Hugging Face Space runs the same code the tests check.
 
