@@ -19,5 +19,7 @@ from app.rag_pipeline import generate_answer  # noqa: E402
 
 
 def call_api(prompt, options, context):
-    result = generate_answer(prompt)
+    # Red-team cases may carry a poisoned knowledge-base doc (indirect prompt injection).
+    inject_doc = ((context or {}).get("vars") or {}).get("inject_doc")
+    result = generate_answer(prompt, injected_docs=[inject_doc] if inject_doc else None)
     return {"output": result["answer"]}

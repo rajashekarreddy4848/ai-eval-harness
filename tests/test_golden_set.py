@@ -87,7 +87,11 @@ def test_normalize(raw, expected):
 def test_is_decline():
     assert is_decline("I don\u2019t know.")
     assert is_decline("That information is not available in the FAQ.")
+    assert is_decline("I\u2019m sorry, but I can\u2019t create or provide discount codes.")
+    assert is_decline("I can't access or share personal account information.")
     assert not is_decline("You have 30 days to request a refund.")
+    # "can't" about the user, not the bot, is not a refusal
+    assert not is_decline("Free plan users can't export JSON; Pro costs $12/month.")
 
 
 def test_missing_facts_ignores_typography():

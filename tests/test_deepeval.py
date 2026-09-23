@@ -83,9 +83,10 @@ def test_correctness_against_ground_truth(case, judge):
     metric = GEval(
         name="Correctness",
         criteria=(
-            "Does the actual output give the key facts in the expected output, without "
-            "contradicting them? Extra wording is fine. Saying 'I don't know', or leaving "
-            "out a key fact, when the expected output contains an answer is incorrect."
+            "Does the actual output give the facts from the expected output that answer "
+            "the input question, without contradicting any of them? Extra wording is fine, "
+            "and so is leaving out expected-output details the question didn't ask about. "
+            "Saying 'I don't know' when the expected output contains an answer is incorrect."
         ),
         evaluation_params=[
             SingleTurnParams.INPUT,

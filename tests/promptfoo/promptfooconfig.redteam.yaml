@@ -1,0 +1,22 @@
+description: "Red-team suite for the FAQ RAG bot"
+
+providers:
+  - id: "python:provider.py"
+
+# Grading of llm-rubric assertions uses this model as the judge. It should differ
+# from the generator (LLM_PROVIDER, Groq by default) to avoid self-grading.
+# Override without editing this file: promptfoo eval --grader groq:openai/gpt-oss-120b
+defaultTest:
+  options:
+    provider: "google:gemini-3.5-flash-lite"
+    # LLMs write typographic characters: "30<U+202F>days", "I don<U+2019>t know", "5<U+2013>7".
+    # Without this, icontains "30 days" fails on a correct answer and not-icontains
+    # "I don't know" passes on a wrong one. Same rules as evals/golden.py normalize().
+    transform: >-
+      output.normalize('NFKC')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2010-\u2014]/g, '-')
+
+# Cases come from evals/redteam_set.json (see redteam_tests.py). Run with --repeat 3.
+tests: file://redteam_tests.py:generate_tests
