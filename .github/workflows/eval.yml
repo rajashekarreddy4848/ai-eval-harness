@@ -64,7 +64,22 @@ jobs:
 
       - name: Run promptfoo regression tests
         working-directory: tests/promptfoo
-        run: promptfoo eval --no-cache
+        run: promptfoo eval --no-cache -o golden-results.json
+
+      # promptfoo's table hides most rows, so list the failing cases explicitly.
+      - name: Show failing promptfoo cases
+        if: failure()
+        working-directory: tests/promptfoo
+        run: |
+          python - <<'PY'
+          import json
+          data = json.load(open("golden-results.json"))
+          for r in data["results"]["results"]:
+              if not r["success"]:
+                  print("FAIL:", r["testCase"]["description"])
+                  print("   answer:", (r["response"] or {}).get("output", "")[:300].replace("\n", " "))
+                  print("   reason:", r.get("error") or (r.get("gradingResult") or {}).get("reason", ""))
+          PY
 
       - name: Run promptfoo red-team suite (3 runs per attack)
         working-directory: tests/promptfoo
