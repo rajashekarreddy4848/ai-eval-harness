@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: pytest tests/test_golden_set.py tests/test_redteam_set.py tests/test_retrieval.py tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py tests/test_quality_gate.py -v
+      - run: pytest tests/test_golden_set.py tests/test_redteam_set.py tests/test_retrieval.py tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py tests/test_quality_gate.py tests/test_decline_detection.py -v
       - name: Retriever comparison (report only)
         run: python evals/compare_retrievers.py --holdout
 
@@ -68,7 +68,7 @@ jobs:
 
       # promptfoo's table hides most rows, so list the failing cases explicitly.
       - name: Show failing promptfoo cases
-        if: failure()
+        if: failure() && hashFiles('tests/promptfoo/golden-results.json') != ''
         working-directory: tests/promptfoo
         run: |
           python - <<'PY'
