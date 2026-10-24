@@ -5,6 +5,12 @@
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 ![Playwright](https://img.shields.io/badge/UI%20tests-Playwright%20%2B%20TypeScript-2EAD33)
 
+![Demo: the bot answers a plan-price question correctly, then declines an off-topic request](docs/demo.gif)
+
+*The live bot answers a question from its knowledge base, then declines an off-topic request.
+This is the behavior the golden set and red-team suite test.
+Regenerate with `cd e2e && node capture-demo.mjs && python3 ../scripts/make_demo_gif.py`.*
+
 A small RAG-based FAQ chatbot wrapped in a full **automated test & evaluation
 pipeline**, built to demonstrate applying test automation / SDET principles
 to LLM-based systems.
