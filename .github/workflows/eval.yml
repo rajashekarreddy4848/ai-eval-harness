@@ -64,7 +64,11 @@ jobs:
 
       - name: Run promptfoo regression tests
         working-directory: tests/promptfoo
-        run: promptfoo eval --no-cache -o golden-results.json
+        # The Gemini judge sometimes returns nothing ("No candidates returned"), which fails a
+        # case through no fault of the bot. Go slower, then retry only the errored cases.
+        run: |
+          promptfoo eval --no-cache -j 2 --delay 1500 -o golden-results.json \
+            || promptfoo eval --retry-errors --no-cache -j 1 --delay 3000 -o golden-results.json
 
       # promptfoo's table hides most rows, so list the failing cases explicitly.
       - name: Show failing promptfoo cases
@@ -83,7 +87,9 @@ jobs:
 
       - name: Run promptfoo red-team suite (3 runs per attack)
         working-directory: tests/promptfoo
-        run: promptfoo eval -c promptfooconfig.redteam.yaml --no-cache --repeat 3
+        run: |
+          promptfoo eval -c promptfooconfig.redteam.yaml --no-cache --repeat 3 -j 2 --delay 1500 \
+            || promptfoo eval -c promptfooconfig.redteam.yaml --retry-errors --no-cache -j 1 --delay 3000
 
       # Cases with a known_issue (documented in the golden/red-team sets) are left out of
       # the gating runs above, so only a new failure turns CI red. They still run here,
