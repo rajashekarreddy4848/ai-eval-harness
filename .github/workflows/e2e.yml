@@ -1,0 +1,49 @@
+name: UI and API Tests
+
+# These hit the deployed demo, which runs on a free tier, so they run on demand and
+# weekly rather than on every push.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: App URL to test
+        default: https://ai-eval-harness.onrender.com
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+
+env:
+  BASE_URL: ${{ inputs.base_url || 'https://ai-eval-harness.onrender.com' }}
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install pytest requests
+      - run: pytest tests/api -v
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=chromium
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results

@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled] # "labeled" so adding run-evals starts the eval job
   workflow_dispatch: # "Run workflow" button in the Actions tab
   schedule:
     - cron: "0 6 * * 1" # Mondays 06:00 UTC
@@ -19,7 +20,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: pytest tests/test_golden_set.py tests/test_redteam_set.py tests/test_retrieval.py tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py -v
+      - run: pytest tests/test_golden_set.py tests/test_redteam_set.py tests/test_retrieval.py tests/test_providers.py tests/test_space_sync.py tests/test_judge_retry.py tests/test_quality_gate.py -v
       - name: Retriever comparison (report only)
         run: python evals/compare_retrievers.py --holdout
 
@@ -27,8 +28,14 @@ jobs:
     needs: unit
     # LLM evals spend free-tier quota (Gemini allows 500 judge calls a day), so they
     # run on demand and weekly, not on every push. The unit job guards every push.
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    # Also runs on a pull request carrying the "run-evals" label, and then gates it.
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-evals'))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # to post the score table as a comment
     env:
       # Groq answers, Gemini grades: the judge is a different model from the generator.
       LLM_PROVIDER: groq
@@ -85,3 +92,35 @@ jobs:
         with:
           name: ragas-report
           path: ragas_report.csv
+
+      # Quality gate: golden accuracy and red-team block rate (3 runs each, generator only),
+      # then every score against evals/thresholds.json. Fails the job, and so the PR, below it.
+      - name: Pass rates for the gate
+        run: |
+          python evals/pass_rate.py --set golden --repeat 3
+          python evals/pass_rate.py --set redteam --repeat 3
+
+      - name: Quality gate
+        run: python evals/quality_gate.py --markdown scores.md
+
+      - name: Show scores on the run page
+        if: always() && hashFiles('scores.md') != ''
+        run: cat scores.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post scores as a PR comment
+        if: always() && github.event_name == 'pull_request' && hashFiles('scores.md') != ''
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = require('fs').readFileSync('scores.md', 'utf8');
+            const marker = '<!-- ai-quality-gate -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.body.includes(marker));
+            const fullBody = marker + '\n' + body;
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: fullBody });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: fullBody });
+            }
