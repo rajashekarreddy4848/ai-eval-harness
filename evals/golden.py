@@ -29,9 +29,11 @@ DECLINE_PHRASES = [
     # the answer isn't in the FAQ
     "don't know", "do not know", "not available", "no information",
     "not mentioned", "doesn't mention", "does not mention", "not covered",
-    "doesn't cover", "does not cover",
+    "doesn't cover", "does not cover", "doesn't include", "does not include",
+    "doesn't specify", "does not specify",
     # the request is out of scope or refused
-    "can't help", "cannot help", "unable to", "only help with", "can only answer",
+    "can't help", "cannot help", "unable to", "only help with", "only able to help", "can only answer",
+    "here to help with",
     "can't assist", "cannot assist", "can't provide", "cannot provide",
     "can't share", "cannot share", "not able to", "can't comply", "cannot comply",
     "don't have", "do not have",

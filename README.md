@@ -1,5 +1,10 @@
 # AI Eval Harness — Automated Quality Testing for LLM/RAG Applications
 
+[![AI Quality Eval Suite](https://github.com/rajashekarreddy4848/ai-eval-harness/actions/workflows/eval.yml/badge.svg)](https://github.com/rajashekarreddy4848/ai-eval-harness/actions/workflows/eval.yml)
+[![UI and API Tests](https://github.com/rajashekarreddy4848/ai-eval-harness/actions/workflows/e2e.yml/badge.svg)](https://github.com/rajashekarreddy4848/ai-eval-harness/actions/workflows/e2e.yml)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
+![Playwright](https://img.shields.io/badge/UI%20tests-Playwright%20%2B%20TypeScript-2EAD33)
+
 A small RAG-based FAQ chatbot wrapped in a full **automated test & evaluation
 pipeline**, built to demonstrate applying test automation / SDET principles
 to LLM-based systems.
@@ -45,6 +50,8 @@ tests/
   test_deepeval.py     # pytest suite: relevancy / faithfulness / hallucination / correctness gates
   test_ragas.py         # scored report across the golden set -> ragas_report.csv
   test_providers.py     # unit tests for generator/judge selection (no API calls)
+  test_quality_gate.py  # unit tests for the CI quality gate (no API calls)
+  api/test_chat_api.py  # API tests on the live chat endpoint: status, schema, latency, bad input
   test_space_sync.py    # fails if the Hugging Face Space copy drifts from app/
   test_judge_retry.py   # unit tests for the judge's rate-limit backoff
   promptfoo/
@@ -52,6 +59,8 @@ tests/
     provider.py            # bridges promptfoo -> our RAG pipeline
     golden_tests.py        # turns the golden set into promptfoo test cases
     promptfooconfig.redteam.yaml, redteam_tests.py  # red-team suite
+e2e/                      # Playwright + TypeScript UI tests on the live demo (traces, axe accessibility)
+evals/quality_gate.py     # fails CI when a score drops below evals/thresholds.json
 scripts/sync_space.py     # copies app/ into huggingface_space/app/
 huggingface_space/        # Gradio demo, deployed on Render via render.yaml (HF Gradio Spaces now need PRO)
 .github/workflows/eval.yml # CI: unit job on every PR, then the three eval suites
@@ -310,3 +319,15 @@ Hugging Face Space runs the same code the tests check.
 - Generate more attacks with promptfoo's built-in red-team plugins, beyond the 24 hand-written ones
 - Run the LLM-graded deepeval cases several times too and gate on pass rate (pass_rate.py only covers deterministic checks)
 - Track eval scores over time (regression detection across commits)
+
+## UI, API tests and the quality gate
+
+- **API tests:** `pytest tests/api -v` calls the live chat endpoint and checks status codes,
+  the answer schema, a latency budget, bad input and injection attempts.
+- **UI tests:** `cd e2e && npm ci && npx playwright test` drives the live demo in a browser,
+  including prompt-injection attempts and an axe accessibility scan. Failures keep a trace,
+  screenshot and video. `.github/workflows/e2e.yml` runs both on demand and weekly.
+- **Quality gate:** `evals/quality_gate.py` compares faithfulness, context precision/recall,
+  golden-set accuracy and red-team block rate to `evals/thresholds.json`. In CI, add the
+  `run-evals` label to a pull request: the eval job runs, posts the score table as a PR
+  comment, and fails the PR if any score is below its threshold.
